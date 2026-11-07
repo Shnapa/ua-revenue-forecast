@@ -1,0 +1,27 @@
+# Data lives on Hugging Face, not in git
+*.parquet
+*.zip
+raw/
+out/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Secrets and local files
+.env
+.env.*
+.DS_Store
+.vscode/
+.idea/
