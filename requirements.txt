@@ -1,0 +1,6 @@
+# The notebook was run on Google Colab runtime 2026.10.
+polars
+numpy
+requests
+statsmodels
+huggingface_hub
