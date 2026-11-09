@@ -1,8 +1,9 @@
-# The notebook was run on Google Colab runtime 2026.10.
-polars
-numpy
-requests
-statsmodels
-huggingface_hub
-scikit-learn
-matplotlib
+# Verified with Python 3.12.10.
+polars==2.1.0
+numpy==2.5.4
+requests==2.34.2
+statsmodels==0.15.0
+huggingface_hub==2.4.0
+scikit-learn==1.9.1
+matplotlib==3.11.2
+lightgbm==4.7.0
