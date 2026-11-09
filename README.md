@@ -16,6 +16,8 @@ Data files are not stored in this repository.
 | File | Contents |
 |---|---|
 | `01_data.ipynb` | Data download and parsing, panel construction, validation folds, baselines N1–N3 and M1, leakage checks |
+| `02_eda_m2.ipynb` | Person B: raw-report EDA, anomaly flags, M2 Ridge, grouped cross-validation, segment diagnostics and optimisation bridge |
+| `b_analysis.py` | Reusable implementation of anomaly flags, M2 train-only preprocessing, metrics and segment analysis |
 
 More notebooks (features and models) will be added.
 
@@ -24,8 +26,11 @@ More notebooks (features and models) will be added.
 1. Open `01_data.ipynb` in Google Colab.
 2. Keep the default flags `REBUILD = False` and `UPLOAD = False`.
 3. Run **Restart & Run All**. It takes about 1–2 minutes and reads the processed data from Hugging Face.
+4. Open `02_eda_m2.ipynb` from the repository root and run **Restart & Run All**. Its official evaluation uses the full panel; the additional Ridge `GroupKFold` diagnostic uses a deterministic 10% company sample to keep Colab runtime practical.
 
 `REBUILD = True` downloads and parses the raw XML again (~30 min, ~4.3 GB). `UPLOAD = True` publishes the files to Hugging Face and asks for a write token.
+
+The official model validation is temporal expanding-window backtesting (F1/F2). The M2 notebook additionally applies five-fold grouped cross-validation inside training data, with EDRPOU as the group, so a company never appears in both the fit and validation parts of an inner fold. This diagnostic does not alter the specified official Ridge setting `alpha = 1`.
 
 ## Key results
 
@@ -38,8 +43,9 @@ MAE on the log scale (lower is better), test years 2023 and 2024:
 | N3: two-year mean | 1.132 | 1.036 |
 | M1: panel AR(1), OLS | 1.446 | 1.171 |
 | M1-LAD: panel AR(1), median regression | 1.188 | 0.950 |
+| M2: Ridge on change in log revenue | 1.492 | 1.489 |
 
-No model beats persistence. Models trained on 2022 learn the war shock (median real revenue ≈ −37%) and under-predict the recovery. Switching M1 from OLS to LAD cuts its error by about 18%.
+No model beats persistence. Models trained on 2022 learn the war shock (median real revenue ≈ −37%) and under-predict the recovery. Switching M1 from OLS to LAD cuts its error by about 18%. M2 also fails the operational rule (`Skill > 0` in both folds).
 
 ## License
 
