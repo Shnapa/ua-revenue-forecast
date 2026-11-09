@@ -1,52 +1,68 @@
-# ua-revenue-forecast
+# Прогнозування доходу українських підприємств
 
-Forecast next-year net revenue (line 2000) of Ukrainian companies from their open annual financial statements.
+Проєкт прогнозує чистий дохід від реалізації підприємства у наступному році за відкритою річною фінансовою звітністю.
 
-## Data
+Уся робота зібрана в одному ноутбуці: [ua_revenue_forecast.ipynb](ua_revenue_forecast.ipynb).
 
-- **Source:** State Statistics Service of Ukraine, dataset “Фінансова звітність підприємств (річна)” on [data.gov.ua](https://data.gov.ua/dataset/6456ef0c-985c-4bb7-bf9d-16831161b416), reporting years 2022–2024. 2025 is kept as a holdout and is never read.
-- **Processed data:** Hugging Face dataset [Shnnapka/fin-zvit-ua](https://huggingface.co/datasets/Shnnapka/fin-zvit-ua)
-  - `reports/`: one row per company and reporting year.
-  - `panel/`: the modelling panel (target = log of next-year net revenue in 2021 prices) and a small sample.
+## Що містить ноутбук
 
-Data files are not stored in this repository.
+Ноутбук виконує повний цикл дослідження:
 
-## Repository structure
+1. завантаження та розбір фінансової звітності;
+2. побудову панелі підприємств і цілі `log1p` доходу наступного року;
+3. expanding-window валідацію на фолдах F1–F2;
+4. наївні бенчмарки N1–N3 та панельну модель M1;
+5. EDA, аналіз пропусків і прапорці аномалій;
+6. Ridge M2 з train-only preprocessing і внутрішньою `GroupKFold` за ЄДРПОУ;
+7. оцінку `MAE_log`, Skill, Bias, MdAPE та WAPE;
+8. аналіз помилок за типом форми й секцією КВЕД;
+9. висновки та напрямки подальшої оптимізації.
 
-| File | Contents |
-|---|---|
-| `01_data.ipynb` | Data download and parsing, panel construction, validation folds, baselines N1–N3 and M1, leakage checks |
-| `02_eda_m2.ipynb` | Person B: raw-report EDA, anomaly flags, M2 Ridge, grouped cross-validation, segment diagnostics and optimisation bridge |
-| `b_analysis.py` | Reusable implementation of anomaly flags, M2 train-only preprocessing, metrics and segment analysis |
+## Дані
 
-More notebooks (features and models) will be added.
+- Джерело: [«Фінансова звітність підприємств (річна)»](https://data.gov.ua/dataset/6456ef0c-985c-4bb7-bf9d-16831161b416), Державна служба статистики України.
+- Використані звітні роки: 2022–2024; показники за 2021 рік відновлюються з дозволених колонок попереднього року.
+- Файл за 2025 рік є holdout і не завантажується та не читається.
+- Готові звіти й панель доступні в [Shnnapka/fin-zvit-ua](https://huggingface.co/datasets/Shnnapka/fin-zvit-ua).
+- Файли даних не зберігаються в Git.
 
-## How to run
+Ціль — реальний чистий дохід наступного року в цінах 2021 року. Моделі працюють зі шкалою `z = log1p(y)`.
 
-1. Open `01_data.ipynb` in Google Colab.
-2. Keep the default flags `REBUILD = False` and `UPLOAD = False`.
-3. Run **Restart & Run All**. It takes about 1–2 minutes and reads the processed data from Hugging Face.
-4. Open `02_eda_m2.ipynb` from the repository root and run **Restart & Run All**. Its official evaluation uses the full panel; the additional Ridge `GroupKFold` diagnostic uses a deterministic 10% company sample to keep Colab runtime practical.
+## Запуск
 
-`REBUILD = True` downloads and parses the raw XML again (~30 min, ~4.3 GB). `UPLOAD = True` publishes the files to Hugging Face and asks for a write token.
+1. Відкрийте репозиторій у Google Colab.
+2. Відкрийте `ua_revenue_forecast.ipynb` з кореня репозиторію.
+3. Залиште `REBUILD = False` і `UPLOAD = False`.
+4. Виконайте **Runtime → Restart session and run all**.
 
-The official model validation is temporal expanding-window backtesting (F1/F2). The M2 notebook additionally applies five-fold grouped cross-validation inside training data, with EDRPOU as the group, so a company never appears in both the fit and validation parts of an inner fold. This diagnostic does not alter the specified official Ridge setting `alpha = 1`.
+За стандартних налаштувань ноутбук завантажує готові `reports_all.parquet` і `panel_v1.parquet` з Hugging Face. `REBUILD = True` повторно завантажує та розбирає сирі XML-файли; це потребує приблизно 4,3 ГБ і значно більше часу. `UPLOAD = True` призначений лише для публікації артефактів і потребує токена Hugging Face.
 
-## Key results
+## Валідація
 
-MAE on the log scale (lower is better), test years 2023 and 2024:
+Основна оцінка використовує часовий backtesting з розширюваним вікном:
 
-| Model | 2023 | 2024 |
+| Фолд | Навчальні цільові роки | Тестовий рік |
 |---|---|---|
-| N1: persistence | **1.024** | **0.902** |
-| N2: sector drift | 1.152 | 0.913 |
-| N3: two-year mean | 1.132 | 1.036 |
-| M1: panel AR(1), OLS | 1.446 | 1.171 |
-| M1-LAD: panel AR(1), median regression | 1.188 | 0.950 |
-| M2: Ridge on change in log revenue | 1.492 | 1.489 |
+| F1 | 2022 | 2023 |
+| F2 | 2022–2023 | 2024 |
 
-No model beats persistence. Models trained on 2022 learn the war shock (median real revenue ≈ −37%) and under-predict the recovery. Switching M1 from OLS to LAD cuts its error by about 18%. M2 also fails the operational rule (`Skill > 0` in both folds).
+Для M2 додатково використовується п’ятифолдова `GroupKFold` лише всередині train. Групування за ЄДРПОУ не дозволяє одному підприємству одночасно потрапити до fit і validation. Офіційний параметр Ridge залишається `alpha = 1`.
 
-## License
+## Основні результати
 
-Source data: State Statistics Service of Ukraine, published under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+`MAE_log`, менше — краще:
+
+| Модель | 2023 | 2024 |
+|---|---:|---:|
+| N1: персистентність | **1.024** | **0.902** |
+| N2: галузевий дрейф | 1.152 | 0.913 |
+| N3: середнє двох років | 1.132 | 1.036 |
+| M1: панельна AR(1), OLS | 1.446 | 1.171 |
+| M1-LAD: медіанна регресія | 1.188 | 0.950 |
+| M2: Ridge для зміни логарифма доходу | 1.492 | 1.489 |
+
+Жодна навчена модель не перевершила N1 в обох фолдах. Дані за 2022 рік містять структурний шок: медіанний реальний дохід знизився приблизно на 37%, тому M1 і M2 систематично недооцінюють подальше відновлення. Найкращою доступною моделлю залишається персистентність.
+
+## Ліцензія
+
+Джерельні дані Державної служби статистики України опубліковані за ліцензією [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
