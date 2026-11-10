@@ -4,14 +4,14 @@ The project forecasts the net revenue (line 2000) of every Ukrainian company one
 
 ## Notebook
 
-| Section | Content | Owner |
-|---|---|---|
-| 0. Goal and data | target, population, deflation, loading the panel | A |
-| 1. EDA and preprocessing | coverage, distributions, anomaly flags | B |
-| 2. Validation | expanding-window folds, metrics, features, harness, leakage checks | C |
-| 3. Baselines | N1-N3, M1-M3 through one harness, decision table, M3 deep dive, segments | A, B, C |
-| 4. Bridge to optimization | GroupKFold, rolling window, expm1 bias, next steps | B |
-| 5. Conclusions | what works, what does not, what next | A |
+| Section | Content |
+|---|---|
+| 0. Goal and data | target, population, deflation, loading the panel |
+| 1. EDA and preprocessing | coverage, distributions, anomaly flags |
+| 2. Validation | expanding-window folds, metrics, features, harness, leakage checks |
+| 3. Baselines | N1-N3, M1-M3 through one harness, decision table, M3 deep dive, segments |
+| 4. Bridge to optimization | GroupKFold, rolling window, expm1 bias, next steps |
+| 5. Conclusions | what works, what does not, what next |
 
 Raw XML files are not parsed during a normal run. The notebook reads only the published panel.
 
